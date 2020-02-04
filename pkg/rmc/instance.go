@@ -156,7 +156,7 @@ func (in *incoming) acceptData(r io.Reader) ([]byte, error) {
 		return nil, errors.New("wrong data signature")
 	}
 	nProc := uint16(in.keys.Length())
-	proof := multi.NewSignature(uint16(crypto.MinimalQuorum(int(nProc))), signedData)
+	proof := multi.NewSignature(crypto.MinimalQuorum(nProc), signedData)
 	in.Lock()
 	defer in.Unlock()
 	in.signedData = signedData
@@ -183,7 +183,7 @@ func newOutgoing(id uint64, data []byte, keys *multi.Keychain) *instance {
 	buf = append(buf[:8], data...)
 	signedData := append(buf, keys.Sign(buf)...)
 	nProc := uint16(keys.Length())
-	proof := multi.NewSignature(uint16(crypto.MinimalQuorum(int(nProc))), signedData)
+	proof := multi.NewSignature(crypto.MinimalQuorum(nProc), signedData)
 	proof.Aggregate(keys.Pid(), keys.Sign(signedData))
 	return &instance{
 		id:         id,
@@ -198,7 +198,7 @@ func newOutgoing(id uint64, data []byte, keys *multi.Keychain) *instance {
 func newRaw(id uint64, data []byte, keys *multi.Keychain) *instance {
 	rawLen := uint32(len(data))
 	nProc := uint16(keys.Length())
-	proof := multi.NewSignature(uint16(crypto.MinimalQuorum(int(nProc))), data)
+	proof := multi.NewSignature(crypto.MinimalQuorum(nProc), data)
 	proof.Aggregate(keys.Pid(), keys.Sign(data))
 	return &instance{
 		id:         id,

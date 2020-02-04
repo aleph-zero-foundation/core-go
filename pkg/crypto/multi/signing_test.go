@@ -4,7 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"gitlab.com/alephledger/consensus-go/pkg/gomel"
+	"gitlab.com/alephledger/core-go/pkg/crypto"
 	"gitlab.com/alephledger/core-go/pkg/crypto/bn256"
 	. "gitlab.com/alephledger/core-go/pkg/crypto/multi"
 )
@@ -46,7 +46,7 @@ var _ = Describe("Signing", func() {
 				threshold uint16
 			)
 			BeforeEach(func() {
-				threshold = gomel.MinimalQuorum(n)
+				threshold = crypto.MinimalQuorum(n)
 				multisig = NewSignature(threshold, data)
 			})
 			It("should not verify without any signatures aggregated", func() {
