@@ -15,7 +15,7 @@ var _ = Describe("T", func() {
 		n, t, dealer uint16
 		msg          []byte
 		tcs          []*ThresholdKey
-		share        []*Share
+		shares       []*Share
 		sKeys        []*p2p.SecretKey
 		pKeys        []*p2p.PublicKey
 		p2pKeys      [][]encrypt.SymmetricKey
@@ -44,41 +44,41 @@ var _ = Describe("T", func() {
 					Expect(err).NotTo(HaveOccurred())
 				}
 				msg = []byte("xyz")
-				share = make([]*Share, n)
+				shares = make([]*Share, n)
 				for i := uint16(0); i < n; i++ {
-					share[i] = tcs[i].CreateShare(msg)
+					shares[i] = tcs[i].CreateShare(msg)
 				}
 			})
 			It("should be verified correctly", func() {
-				Expect(tcs[2].VerifyShare(share[1], msg)).To(BeTrue())
-				Expect(tcs[2].VerifyShare(share[1], append(msg, byte(1)))).To(BeFalse())
+				Expect(tcs[2].VerifyShare(shares[1], msg)).To(BeTrue())
+				Expect(tcs[2].VerifyShare(shares[1], append(msg, byte(1)))).To(BeFalse())
 			})
 			It("Should be correctly combined by t-parties", func() {
-				c, ok := tcs[0].CombineShares(share[:t])
+				c, ok := tcs[0].CombineShares(shares[:t])
 				Expect(ok).To(BeTrue())
 				Expect(tcs[0].VerifySignature(c, msg)).To(BeTrue())
 				Expect(tcs[0].VerifySignature(c, append(msg, byte(1)))).To(BeFalse())
 			})
 			It("Should be correctly combined by more than t-parties", func() {
-				c, ok := tcs[0].CombineShares(share)
+				c, ok := tcs[0].CombineShares(shares)
 				Expect(ok).To(BeTrue())
 				Expect(tcs[0].VerifySignature(c, msg)).To(BeTrue())
 				Expect(tcs[0].VerifySignature(c, append(msg, byte(1)))).To(BeFalse())
 			})
 			It("Should be combined to the same  by two different sets of t-parties", func() {
-				c1, ok := tcs[0].CombineShares(share[:t])
+				c1, ok := tcs[0].CombineShares(shares[:t])
 				Expect(ok).To(BeTrue())
-				c2, ok := tcs[0].CombineShares(share[(n - t):])
+				c2, ok := tcs[0].CombineShares(shares[(n - t):])
 				Expect(ok).To(BeTrue())
 				Expect(c1.Marshal()).To(Equal(c2.Marshal()))
 			})
 			It("Shouldn't be correctly combined by t-1-parties", func() {
-				_, ok := tcs[0].CombineShares(share[:(t - 1)])
+				_, ok := tcs[0].CombineShares(shares[:(t - 1)])
 				Expect(ok).To(BeFalse())
 			})
 			It("Should be marshalled and unmarshalled correctly", func() {
 				for i := uint16(0); i < n; i++ {
-					csMarshalled := share[i].Marshal()
+					csMarshalled := shares[i].Marshal()
 					var cs = new(Share)
 					err := cs.Unmarshal(csMarshalled)
 					Expect(err).NotTo(HaveOccurred())
@@ -114,6 +114,53 @@ var _ = Describe("T", func() {
 
 				err = c.Unmarshal(priv.Sign(data).Marshal())
 				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+	})
+
+	Context("Multicoin", func() {
+		var (
+			tcs1 []*ThresholdKey
+			tcs2 []*ThresholdKey
+		)
+		BeforeEach(func() {
+			n, t = 10, 4
+
+			tcs = make([]*ThresholdKey, n)
+			tcs1 = make([]*ThresholdKey, n)
+			tcs2 = make([]*ThresholdKey, n)
+			sKeys = make([]*p2p.SecretKey, n)
+			pKeys = make([]*p2p.PublicKey, n)
+			p2pKeys = make([][]encrypt.SymmetricKey, n)
+			for i := uint16(0); i < n; i++ {
+				pKeys[i], sKeys[i], _ = p2p.GenerateKeys()
+			}
+			for i := uint16(0); i < n; i++ {
+				p2pKeys[i], _ = p2p.Keys(sKeys[i], pKeys, i)
+			}
+
+			gtc1 := NewRandomGlobal(n, t)
+			tc1, _ := gtc1.Encrypt(p2pKeys[0])
+			gtc2 := NewRandomGlobal(n, t)
+			tc2, _ := gtc2.Encrypt(p2pKeys[1])
+
+			tc1Encoded := tc1.Encode()
+			tc2Encoded := tc2.Encode()
+			for i := uint16(0); i < n; i++ {
+				tcs1[i], _, _ = Decode(tc1Encoded, 0, i, p2pKeys[i][0])
+				tcs2[i], _, _ = Decode(tc2Encoded, 1, i, p2pKeys[i][1])
+				tcs[i] = CreateMultikey([]*ThresholdKey{tcs1[i], tcs2[i]})
+			}
+			msg = []byte("xyz")
+			shares = make([]*Share, n)
+			for i := uint16(0); i < n; i++ {
+				shares[i] = tcs[i].CreateShare(msg)
+			}
+		})
+		Describe("coin shares", func() {
+			It("should be the sum of coin shares among single coins", func() {
+				shs := SumShares([]*Share{tcs1[0].CreateShare(msg), tcs2[0].CreateShare(msg)})
+				Expect(shs.Marshal()).To(Equal(shares[0].Marshal()))
 			})
 		})
 	})
