@@ -1,4 +1,4 @@
-package tcoin
+package tss
 
 import (
 	"math/big"

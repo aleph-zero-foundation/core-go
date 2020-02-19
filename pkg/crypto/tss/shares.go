@@ -1,4 +1,4 @@
-package tsignature
+package tss
 
 import (
 	"encoding/binary"

@@ -1,4 +1,4 @@
-package tsoin
+package tss
 
 import (
 	"crypto/subtle"
