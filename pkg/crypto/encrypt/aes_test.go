@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "gitlab.com/alephledger/consensus-go/pkg/crypto/encrypt"
+	. "gitlab.com/alephledger/core-go/pkg/crypto/encrypt"
 )
 
 var _ = Describe("Encryption", func() {

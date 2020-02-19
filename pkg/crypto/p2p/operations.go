@@ -4,7 +4,7 @@ import (
 	"crypto/subtle"
 
 	"github.com/cloudflare/bn256"
-	"gitlab.com/alephledger/consensus-go/pkg/crypto/encrypt"
+	"gitlab.com/alephledger/core-go/pkg/crypto/encrypt"
 )
 
 // SharedSecret is a secret shared between two peers.

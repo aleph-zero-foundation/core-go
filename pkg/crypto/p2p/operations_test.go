@@ -1,8 +1,8 @@
 package p2p_test
 
 import (
-	"gitlab.com/alephledger/consensus-go/pkg/crypto/encrypt"
-	. "gitlab.com/alephledger/consensus-go/pkg/crypto/p2p"
+	"gitlab.com/alephledger/core-go/pkg/crypto/encrypt"
+	. "gitlab.com/alephledger/core-go/pkg/crypto/p2p"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
