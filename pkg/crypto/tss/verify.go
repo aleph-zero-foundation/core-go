@@ -7,25 +7,25 @@ import (
 )
 
 // VerifyShare verifies whether the given signature share is correct.
-func (ts *ThresholdSignature) VerifyShare(share *Share, msg []byte) bool {
+func (ts *ThresholdKey) VerifyShare(share *Share, msg []byte) bool {
 	return ts.vks[share.owner].Verify(share.sgn, msg)
 }
 
 // VerifySignature verifies whether the given signature is correct.
-func (ts *ThresholdSignature) VerifySignature(s *Signature, msg []byte) bool {
+func (ts *ThresholdKey) VerifySignature(s *Signature, msg []byte) bool {
 	return ts.globalVK.Verify(s.sgn, msg)
 }
 
 // PolyVerify uses the given polyVerifier to verify if the verification keys form
 // a polynomial sequence.
-func (ts *ThresholdSignature) PolyVerify(pv bn256.PolyVerifier) bool {
+func (ts *ThresholdKey) PolyVerify(pv bn256.PolyVerifier) bool {
 	return pv.Verify(ts.vks)
 }
 
 // VerifySecretKey checks if the verificationKey and secretKey form a valid pair.
 // It returns the incorrect secret key when the pair of keys is invalid or
 // nil when the keys are valid.
-func (ts *ThresholdSignature) VerifySecretKey() *bn256.SecretKey {
+func (ts *ThresholdKey) VerifySecretKey() *bn256.SecretKey {
 	vk := ts.sk.VerificationKey()
 	if subtle.ConstantTimeCompare(vk.Marshal(), ts.vks[ts.owner].Marshal()) != 1 {
 		return ts.sk

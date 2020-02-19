@@ -55,7 +55,7 @@ func (s *Signature) Unmarshal(data []byte) error {
 }
 
 // CreateShare creates a Share for given process and nonce.
-func (ts *ThresholdSignature) CreateShare(msg []byte) *Share {
+func (ts *ThresholdKey) CreateShare(msg []byte) *Share {
 	return &Share{
 		owner: ts.owner,
 		sgn:   ts.sk.Sign(msg),
@@ -64,7 +64,7 @@ func (ts *ThresholdSignature) CreateShare(msg []byte) *Share {
 
 // CombineShares combines the given shares into a Signature.
 // It returns a Signature and a bool value indicating whether the combining was successful or not.
-func (ts *ThresholdSignature) CombineShares(shares []*Share) (*Signature, bool) {
+func (ts *ThresholdKey) CombineShares(shares []*Share) (*Signature, bool) {
 	if uint16(len(shares)) > ts.threshold {
 		shares = shares[:ts.threshold]
 	}

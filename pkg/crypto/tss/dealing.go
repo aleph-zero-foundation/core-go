@@ -52,7 +52,7 @@ func NewRandomGlobal(nProc, threshold uint16) *TSS {
 }
 
 // Encrypt encrypts secretKeys of the given TSS
-// using given a set of encryptionKeys and returns an (unowned)ThresholdSignature.
+// using given a set of encryptionKeys and returns an (unowned)ThresholdKey.
 func (tss *TSS) Encrypt(encryptionKeys []encrypt.SymmetricKey) (*ThresholdKey, error) {
 	nProc := uint16(len(encryptionKeys))
 	encSKs := make([]encrypt.CipherText, nProc)
@@ -111,9 +111,9 @@ func (tk *ThresholdKey) Encode() []byte {
 	return data
 }
 
-// Decode decodes encoded ThresholdSignature obtained from the dealer using given decryptionKey.
+// Decode decodes encoded ThresholdKey obtained from the dealer using given decryptionKey.
 // It returns
-// (1) decoded ThresholdSignature,
+// (1) decoded ThresholdKey,
 // (2) whether the owner's secretKey is correctly encoded and matches corresponding verification key,
 // (3) an error in decoding (excluding errors obtained while decoding owners secret key),
 func Decode(data []byte, dealer, owner uint16, decryptionKey encrypt.SymmetricKey) (*ThresholdKey, bool, error) {
