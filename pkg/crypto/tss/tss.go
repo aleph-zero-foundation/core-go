@@ -34,7 +34,7 @@ type Share struct {
 }
 
 // Signature is a result of merging Shares.
-type Coin struct {
+type Signature struct {
 	sgn *bn256.Signature
 }
 
