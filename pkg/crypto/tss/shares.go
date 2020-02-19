@@ -3,7 +3,6 @@ package tss
 import (
 	"encoding/binary"
 	"errors"
-	"math/big"
 	"sync"
 
 	"gitlab.com/alephledger/core-go/pkg/crypto/bn256"
