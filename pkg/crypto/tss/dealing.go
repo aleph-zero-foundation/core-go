@@ -118,7 +118,7 @@ func (tk *ThresholdKey) Encode() []byte {
 // (3) an error in decoding (excluding errors obtained while decoding owners secret key),
 func Decode(data []byte, dealer, owner uint16, decryptionKey encrypt.SymmetricKey) (*ThresholdKey, bool, error) {
 	ind := 0
-	dataTooShort := errors.New("Decoding tcoin failed. Given bytes slice is too short")
+	dataTooShort := errors.New("Decoding key failed. Given bytes slice is too short")
 	if len(data) < ind+2 {
 		return nil, false, dataTooShort
 	}
