@@ -42,7 +42,7 @@ func New(nProc uint16, coeffs []*big.Int) *TSS {
 }
 
 // NewRandom generates a random polynomial of degree thereshold - 1 and builds a TSS based on the polynomial.
-func NewRandomGlobal(nProc, threshold uint16) *TSS {
+func NewRandom(nProc, threshold uint16) *TSS {
 	var coeffs = make([]*big.Int, threshold)
 	for i := uint16(0); i < threshold; i++ {
 		c, _ := rand.Int(rand.Reader, bn256.Order)

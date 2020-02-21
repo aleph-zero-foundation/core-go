@@ -25,7 +25,7 @@ var _ = Describe("T", func() {
 			BeforeEach(func() {
 				n, t, dealer = 10, 3, 5
 
-				gtc := NewRandomGlobal(n, t)
+				gtc := NewRandom(n, t)
 				tcs = make([]*ThresholdKey, n)
 				sKeys = make([]*p2p.SecretKey, n)
 				pKeys = make([]*p2p.PublicKey, n)
@@ -145,9 +145,9 @@ var _ = Describe("T", func() {
 				p2pKeys[i], _ = p2p.Keys(sKeys[i], pKeys, i)
 			}
 
-			gtc1 := NewRandomGlobal(n, t)
+			gtc1 := NewRandom(n, t)
 			tc1, _ := gtc1.Encrypt(p2pKeys[0])
-			gtc2 := NewRandomGlobal(n, t)
+			gtc2 := NewRandom(n, t)
 			tc2, _ := gtc2.Encrypt(p2pKeys[1])
 
 			tc1Encoded := tc1.Encode()
@@ -158,12 +158,24 @@ var _ = Describe("T", func() {
 				wtcs[i] = CreateWTK([]*ThresholdKey{tcs1[i], tcs2[i]}, shareProviders)
 			}
 			msg = []byte("xyz")
-			shares = make([]*Share, n)
-			for i := uint16(0); i < n; i++ {
-				shares[i] = wtcs[i].CreateShare(msg)
-			}
+		})
+		Describe("share providers", func() {
+			It("should produce shares for share providers", func() {
+				Expect(wtcs[0].CreateShare(msg)).ToNot(BeNil())
+			})
+			It("should not produce shares for parties that are not share providers", func() {
+				delete(shareProviders, 1)
+				wtcs[1] = CreateWTK([]*ThresholdKey{tcs1[1], tcs2[1]}, shareProviders)
+				Expect(wtcs[1].CreateShare(msg)).To(BeNil())
+			})
 		})
 		Describe("coin shares", func() {
+			BeforeEach(func() {
+				shares = make([]*Share, n)
+				for i := uint16(0); i < n; i++ {
+					shares[i] = wtcs[i].CreateShare(msg)
+				}
+			})
 			It("should be the sum of coin shares among single coins", func() {
 				shs := SumShares([]*Share{tcs1[0].CreateShare(msg), tcs2[0].CreateShare(msg)})
 				Expect(shs.Marshal()).To(Equal(shares[0].Marshal()))
