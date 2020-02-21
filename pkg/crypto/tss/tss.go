@@ -27,6 +27,13 @@ type ThresholdKey struct {
 	sk        *bn256.SecretKey
 }
 
+// WeakThresholdKey is a threshold key that can produce shares iff
+// the owner is a share provider
+type WeakThresholdKey struct {
+	ThresholdKey
+	shareProviders map[uint16]bool
+}
+
 // Share is a share of the coin owned by a process.
 type Share struct {
 	owner uint16

@@ -97,3 +97,15 @@ func (tk *ThresholdKey) CombineShares(shares []*Share) (*Signature, bool) {
 
 	return &Signature{sgn: sum}, true
 }
+
+// CreateShare creates a Share for given process and message if the holder of
+// the weak threshold key is a share provider. Else it returns nil.
+func (wtk *WeakThresholdKey) CreateShare(msg []byte) *Share {
+	if !wtk.shareProviders[wtk.owner] {
+		return nil
+	}
+	return &Share{
+		owner: wtk.owner,
+		sgn:   wtk.sk.Sign(msg),
+	}
+}

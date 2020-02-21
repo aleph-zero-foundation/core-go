@@ -118,17 +118,23 @@ var _ = Describe("T", func() {
 		})
 	})
 
-	Context("Multicoin", func() {
+	Context("WeakThresholdKey", func() {
 		var (
-			tcs1 []*ThresholdKey
-			tcs2 []*ThresholdKey
+			tcs1           []*ThresholdKey
+			tcs2           []*ThresholdKey
+			wtcs           []*WeakThresholdKey
+			shareProviders map[uint16]bool
 		)
 		BeforeEach(func() {
 			n, t = 10, 4
 
-			tcs = make([]*ThresholdKey, n)
+			wtcs = make([]*WeakThresholdKey, n)
 			tcs1 = make([]*ThresholdKey, n)
 			tcs2 = make([]*ThresholdKey, n)
+			shareProviders = map[uint16]bool{}
+			for i := uint16(0); i < n; i++ {
+				shareProviders[i] = true
+			}
 			sKeys = make([]*p2p.SecretKey, n)
 			pKeys = make([]*p2p.PublicKey, n)
 			p2pKeys = make([][]encrypt.SymmetricKey, n)
@@ -149,12 +155,12 @@ var _ = Describe("T", func() {
 			for i := uint16(0); i < n; i++ {
 				tcs1[i], _, _ = Decode(tc1Encoded, 0, i, p2pKeys[i][0])
 				tcs2[i], _, _ = Decode(tc2Encoded, 1, i, p2pKeys[i][1])
-				tcs[i] = CreateMultikey([]*ThresholdKey{tcs1[i], tcs2[i]})
+				wtcs[i] = CreateWTK([]*ThresholdKey{tcs1[i], tcs2[i]}, shareProviders)
 			}
 			msg = []byte("xyz")
 			shares = make([]*Share, n)
 			for i := uint16(0); i < n; i++ {
-				shares[i] = tcs[i].CreateShare(msg)
+				shares[i] = wtcs[i].CreateShare(msg)
 			}
 		})
 		Describe("coin shares", func() {
