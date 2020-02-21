@@ -11,9 +11,6 @@ import (
 // Data is a packet of binary data that is embedded in a single unit.
 type Data []byte
 
-// DataSource is a source of units data.
-type DataSource <-chan Data
-
 // DataSink is an output for the data to sort.
 type DataSink chan<- Data
 
