@@ -21,16 +21,15 @@ type Observable interface {
 
 type observerPair struct {
 	observer func(data interface{})
-	ix       *int
+	ix       int
 }
 
 type observable struct {
-	removed   int
-	observers []observerPair
+	observers []*observerPair
 }
 
 func newObservable() *observable {
-	return &observable{removed: 0, observers: nil}
+	return &observable{observers: nil}
 }
 
 // NewObservable creates an default instance of the Observable type.
@@ -39,75 +38,33 @@ func NewObservable() Observable {
 }
 
 type observerMemo struct {
-	ix      *int
+	id      *observerPair
 	manager *observable
 }
 
 func (om *observerMemo) RemoveObserver() {
-	om.manager.removeObserver(om)
-}
-
-func (om *observable) fitToSize() {
-	if om.removed == 0 {
-		return
-	}
-	lastEmptyIx := 0
-	for _, obs := range om.observers {
-		if obs.ix != nil {
-			om.observers[lastEmptyIx] = obs
-			*obs.ix = lastEmptyIx
-			lastEmptyIx++
-		}
-	}
-	om.observers = om.observers[:lastEmptyIx]
-	om.removed = 0
+	om.manager.removeObserver(om.id)
 }
 
 func (om *observable) AddObserver(observer func(data interface{})) ObserverManager {
-	if cap(om.observers) == len(om.observers) {
-		om.reallocate()
-	}
-
-	pair := observerPair{ix: new(int), observer: observer}
-	*pair.ix = len(om.observers)
+	pair := &observerPair{ix: len(om.observers), observer: observer}
 	om.observers = append(om.observers, pair)
-	return &observerMemo{ix: pair.ix, manager: om}
+	return &observerMemo{id: pair, manager: om}
 }
 
-func (om *observable) removeObserver(memo *observerMemo) {
-	ix := *memo.ix
-	om.observers[ix].observer = nil
-	om.observers[ix].ix = nil
-	om.removed++
-	if om.size() < cap(om.observers)/4 {
-		om.reallocate()
-	} else if om.removed > cap(om.observers)/2 {
-		om.fitToSize()
+func (om *observable) removeObserver(memo *observerPair) {
+	ix := memo.ix
+	old := append(om.observers[:ix], om.observers[ix+1:]...)
+	for ix, obs := range old {
+		obs.ix = ix
 	}
-}
-
-func (om *observable) reallocate() {
-	newObservers := make([]observerPair, 0, 2*om.size())
-	newObservers = append(newObservers, om.observers...)
-	om.observers = newObservers
-	om.fitToSize()
-}
-
-func (om *observable) size() int {
-	return len(om.observers) - om.removed
-}
-
-func (om *observable) notify(data interface{}) {
-	for _, obs := range om.observers {
-		if obs.ix != nil {
-			obs.observer(data)
-		}
-	}
+	om.observers = append([]*observerPair{}, old...)
 }
 
 func (om *observable) Notify(data interface{}) {
-	om.fitToSize()
-	om.notify(data)
+	for _, obs := range om.observers {
+		obs.observer(data)
+	}
 }
 
 type safeObservable struct {
@@ -120,17 +77,6 @@ func NewThreadSafeObservable() Observable {
 	return &safeObservable{manager: newObservable(), mx: sync.RWMutex{}}
 }
 
-type safeObserverManager struct {
-	manager ObserverManager
-	mx      *sync.RWMutex
-}
-
-func (som *safeObserverManager) RemoveObserver() {
-	som.mx.Lock()
-	defer som.mx.Unlock()
-	som.manager.RemoveObserver()
-}
-
 func (som *safeObservable) AddObserver(observer func(data interface{})) ObserverManager {
 	som.mx.Lock()
 	defer som.mx.Unlock()
@@ -140,15 +86,17 @@ func (som *safeObservable) AddObserver(observer func(data interface{})) Observer
 
 func (som *safeObservable) Notify(data interface{}) {
 	som.mx.RLock()
-	refit := som.manager.removed > 0
-	som.mx.RUnlock()
-	if refit {
-		som.mx.Lock()
-		som.manager.fitToSize()
-		som.mx.Unlock()
-	}
-
-	som.mx.RLock()
 	defer som.mx.RUnlock()
-	som.manager.notify(data)
+	som.manager.Notify(data)
+}
+
+type safeObserverManager struct {
+	manager ObserverManager
+	mx      *sync.RWMutex
+}
+
+func (som *safeObserverManager) RemoveObserver() {
+	som.mx.Lock()
+	defer som.mx.Unlock()
+	som.manager.RemoveObserver()
 }
