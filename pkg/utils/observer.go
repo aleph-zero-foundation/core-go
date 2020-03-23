@@ -54,11 +54,13 @@ func (om *observable) AddObserver(observer func(data interface{})) ObserverManag
 
 func (om *observable) removeObserver(memo *observerPair) {
 	ix := memo.ix
-	old := append(om.observers[:ix], om.observers[ix+1:]...)
-	for ix, obs := range old {
+	new := make([]*observerPair, 0, len(om.observers)-1)
+	new = append(new, om.observers[:ix]...)
+	new = append(new, om.observers[ix+1:]...)
+	for ix, obs := range new {
 		obs.ix = ix
 	}
-	om.observers = append([]*observerPair{}, old...)
+	om.observers = new
 }
 
 func (om *observable) Notify(data interface{}) {
