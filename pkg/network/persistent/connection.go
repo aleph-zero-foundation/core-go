@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"net"
 	"sync/atomic"
 	"time"
 )
@@ -138,6 +139,10 @@ func (c *conn) TimeoutAfter(t time.Duration) {
 		time.Sleep(t)
 		c.Close()
 	}()
+}
+
+func (c *conn) RemoteAddr() net.Addr {
+	return c.link.remoteAddr()
 }
 
 func (c *conn) enqueue(b []byte) {

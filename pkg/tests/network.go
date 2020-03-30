@@ -3,6 +3,7 @@ package tests
 import (
 	"errors"
 	"io"
+	"net"
 	"time"
 
 	"gitlab.com/alephledger/core-go/pkg/network"
@@ -34,6 +35,8 @@ func (c *connection) Close() error {
 }
 
 func (c *connection) TimeoutAfter(time.Duration) {}
+
+func (c *connection) RemoteAddr() net.Addr { return nil }
 
 // NewConnection creates a pipe simulating a pair of network connections.
 func NewConnection() (network.Connection, network.Connection) {

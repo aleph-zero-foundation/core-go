@@ -1,6 +1,7 @@
 package network
 
 import (
+	"net"
 	"time"
 )
 
@@ -11,4 +12,5 @@ type Connection interface {
 	Flush() error
 	Close() error
 	TimeoutAfter(t time.Duration)
+	RemoteAddr() net.Addr
 }

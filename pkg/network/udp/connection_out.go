@@ -57,3 +57,7 @@ func (c *connOut) Close() error {
 func (c *connOut) TimeoutAfter(t time.Duration) {
 	c.link.SetDeadline(time.Now().Add(t))
 }
+
+func (c *connOut) RemoteAddr() net.Addr {
+	return c.link.RemoteAddr()
+}

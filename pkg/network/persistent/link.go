@@ -128,3 +128,7 @@ func (l *link) call() network.Connection {
 	l.lastID++
 	return conn
 }
+
+func (l *link) remoteAddr() net.Addr {
+	return l.tcpLink.RemoteAddr()
+}

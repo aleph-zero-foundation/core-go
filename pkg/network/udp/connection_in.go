@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"net"
 	"time"
 
 	"gitlab.com/alephledger/core-go/pkg/network"
@@ -11,13 +12,15 @@ import (
 
 type connIn struct {
 	reader io.Reader
+	addr   net.Addr
 	recv   int
 }
 
 // newConnIn initializes an incoming UDP "connection" -- wrapping the content of the incoming packet
-func newConnIn(packet []byte) network.Connection {
+func newConnIn(packet []byte, addr net.Addr) network.Connection {
 	return &connIn{
 		reader: bytes.NewReader(packet),
+		addr:   addr,
 	}
 }
 
@@ -41,4 +44,8 @@ func (c *connIn) Close() error {
 
 func (c *connIn) TimeoutAfter(t time.Duration) {
 	// does nothing as the UDP connIn is non-blocking anyway
+}
+
+func (c *connIn) RemoteAddr() net.Addr {
+	return c.addr
 }

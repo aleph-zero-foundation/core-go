@@ -31,11 +31,11 @@ func NewServer(localAddress string, remoteAddresses []string) (network.Server, e
 func (s *server) Listen(timeout time.Duration) (network.Connection, error) {
 	s.listener.SetDeadline(time.Now().Add(timeout))
 	buffer := make([]byte, (1 << 16))
-	n, _, err := s.listener.ReadFromUDP(buffer)
+	n, addr, err := s.listener.ReadFromUDP(buffer)
 	if err != nil {
 		return nil, err
 	}
-	conn := newConnIn(buffer[:n])
+	conn := newConnIn(buffer[:n], addr)
 	return conn, nil
 }
 
