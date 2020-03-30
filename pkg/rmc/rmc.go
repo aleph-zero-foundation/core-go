@@ -48,7 +48,7 @@ func (rmc *RMC) AcceptData(id uint64, pid uint16, r io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return in.acceptData(r)
+	return in.AcceptData(r)
 }
 
 // SendSignature writes the signature associated with id to w.
@@ -58,7 +58,7 @@ func (rmc *RMC) SendSignature(id uint64, w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	return ins.sendSignature(w)
+	return ins.SendSignature(w)
 }
 
 // AcceptProof reads a proof from r and verifies it is a proof that id succeeded.
@@ -67,7 +67,7 @@ func (rmc *RMC) AcceptProof(id uint64, r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	return ins.acceptProof(r)
+	return ins.AcceptProof(r)
 }
 
 // SendData writes data concatenated with the id and signed by us to w.
@@ -77,10 +77,10 @@ func (rmc *RMC) SendData(id uint64, data []byte, w io.Writer) error {
 		if err != nil {
 			return err
 		}
-		return out.sendData(w)
+		return out.SendData(w)
 	}
 	out := rmc.newOutgoingInstance(id, data)
-	return out.sendData(w)
+	return out.SendData(w)
 }
 
 // AcceptSignature reads a signature from r and verifies it represents pid signing the data associated with id.
@@ -90,7 +90,7 @@ func (rmc *RMC) AcceptSignature(id uint64, pid uint16, r io.Reader) (bool, error
 	if err != nil {
 		return false, err
 	}
-	return ins.acceptSignature(pid, r)
+	return ins.AcceptSignature(pid, r)
 }
 
 // SendProof writes the proof associated with id to w.
@@ -99,7 +99,7 @@ func (rmc *RMC) SendProof(id uint64, w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	return ins.sendProof(w)
+	return ins.SendProof(w)
 }
 
 // SendFinished writes the data and proof associated with id to w.
@@ -108,7 +108,7 @@ func (rmc *RMC) SendFinished(id uint64, w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	return ins.sendFinished(w)
+	return ins.SendFinished(w)
 }
 
 // AcceptFinished reads a pair of data and proof from r and verifies it corresponds to a successfully finished RMC.
@@ -117,7 +117,7 @@ func (rmc *RMC) AcceptFinished(id uint64, pid uint16, r io.Reader) ([]byte, erro
 	if err != nil {
 		in, _ = rmc.newIncomingInstance(id, pid)
 	}
-	return in.acceptFinished(r)
+	return in.AcceptFinished(r)
 }
 
 // Status returns the state corresponding to id.
@@ -126,7 +126,7 @@ func (rmc *RMC) Status(id uint64) Status {
 	if err != nil {
 		return Unknown
 	}
-	return ins.status()
+	return ins.Status()
 }
 
 // Data returns the raw data corresponding to id.
@@ -136,7 +136,7 @@ func (rmc *RMC) Data(id uint64) []byte {
 	if err != nil {
 		return nil
 	}
-	return ins.data()
+	return ins.Data()
 }
 
 // Proof returns the proof corresponding to id.

@@ -117,19 +117,19 @@ func (c *conn) Flush() error {
 
 func (c *conn) Close() error {
 	if atomic.CompareAndSwapInt64(&c.closed, 0, 1) {
-		err := c.sendFinished()
+		err := c.SendFinished()
 		if err != nil {
 			return err
 		}
-		c.finalize()
+		c.Finalize()
 		c.erase()
 	}
 	return nil
 }
 
-func (c *conn) localClose() {
+func (c *conn) LocalClose() {
 	if atomic.CompareAndSwapInt64(&c.closed, 0, 1) {
-		c.finalize()
+		c.Finalize()
 		c.erase()
 	}
 }
@@ -142,17 +142,17 @@ func (c *conn) TimeoutAfter(t time.Duration) {
 }
 
 func (c *conn) RemoteAddr() net.Addr {
-	return c.link.remoteAddr()
+	return c.link.RemoteAddr()
 }
 
-func (c *conn) enqueue(b []byte) {
+func (c *conn) Enqueue(b []byte) {
 	if atomic.LoadInt64(&c.closed) == 0 {
 		c.queue.ch <- b
 		c.recv += len(b)
 	}
 }
 
-func (c *conn) sendFinished() error {
+func (c *conn) SendFinished() error {
 	header := make([]byte, headerSize)
 	binary.LittleEndian.PutUint64(header, c.id)
 	binary.LittleEndian.PutUint32(header[8:], 0)
@@ -160,7 +160,7 @@ func (c *conn) sendFinished() error {
 	return err
 }
 
-func (c *conn) finalize() {
+func (c *conn) Finalize() {
 	close(c.queue.ch)
 }
 

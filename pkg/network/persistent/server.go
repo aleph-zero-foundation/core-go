@@ -44,7 +44,7 @@ func (s *server) Dial(pid uint16, timeout time.Duration) (network.Connection, er
 	if err != nil {
 		return nil, err
 	}
-	return caller.call(), nil
+	return caller.Call(), nil
 }
 
 func (s *server) Listen(timeout time.Duration) (network.Connection, error) {
@@ -76,7 +76,7 @@ func (s *server) Start() error {
 			}
 			newLink := newLink(ln, s.queue, &s.wg, &s.quit)
 			s.receivers = append(s.receivers, newLink)
-			newLink.start()
+			newLink.Start()
 		}
 	}()
 	return nil
@@ -86,11 +86,11 @@ func (s *server) Stop() {
 	atomic.StoreInt64(&s.quit, 1)
 	for _, link := range s.callers {
 		if link != nil {
-			link.stop()
+			link.Stop()
 		}
 	}
 	for _, link := range s.receivers {
-		link.stop()
+		link.Stop()
 	}
 	s.tcpListener.Close()
 	s.wg.Wait()
@@ -99,14 +99,14 @@ func (s *server) Stop() {
 func (s *server) getCaller(pid uint16, timeout time.Duration) (*link, error) {
 	s.mx[pid].Lock()
 	defer s.mx[pid].Unlock()
-	if s.callers[pid] == nil || s.callers[pid].isDead() {
+	if s.callers[pid] == nil || s.callers[pid].IsDead() {
 		ln, err := net.DialTimeout("tcp", s.remoteAddrs[pid], timeout)
 		if err != nil {
 			return nil, err
 		}
 		newLink := newLink(ln, nil, &s.wg, &s.quit)
 		s.callers[pid] = newLink
-		newLink.start()
+		newLink.Start()
 	}
 	return s.callers[pid], nil
 }

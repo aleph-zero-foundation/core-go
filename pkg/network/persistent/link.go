@@ -35,39 +35,39 @@ func newLink(tcpLink net.Conn, queue chan network.Connection, wg *sync.WaitGroup
 	}
 }
 
-func (l *link) start() {
+func (l *link) Start() {
+	l.wg.Add(1)
 	go func() {
-		l.wg.Add(1)
 		defer l.wg.Done()
 		hdr := make([]byte, headerSize)
 		for atomic.LoadInt64(l.quit) == 0 {
 			_, err := io.ReadFull(l.tcpLink, hdr)
 			if err != nil {
-				l.stop()
+				l.Stop()
 				return
 			}
 			id, size := parseHeader(hdr)
 			conn, ok := l.getConn(id)
 			if size == 0 {
 				if ok {
-					conn.localClose()
+					conn.LocalClose()
 				}
 				continue
 			}
 			buf := make([]byte, size)
 			_, err = io.ReadFull(l.tcpLink, buf)
 			if err != nil {
-				l.stop()
+				l.Stop()
 				return
 			}
 			if ok {
-				conn.enqueue(buf)
+				conn.Enqueue(buf)
 				continue
 			}
 			if l.isOut() {
 			} else {
 				nc := newConn(id, l)
-				nc.enqueue(buf)
+				nc.Enqueue(buf)
 				l.addConn(nc)
 				l.queue <- nc
 			}
@@ -92,13 +92,13 @@ func (l *link) isOut() bool {
 	return l.queue == nil
 }
 
-func (l *link) isDead() bool {
+func (l *link) IsDead() bool {
 	l.mx.Lock()
 	defer l.mx.Unlock()
 	return l.tcpLink == nil
 }
 
-func (l *link) stop() {
+func (l *link) Stop() {
 	l.mx.Lock()
 	defer l.mx.Unlock()
 	if l.tcpLink == nil {
@@ -106,8 +106,8 @@ func (l *link) stop() {
 	}
 	for id, conn := range l.conns {
 		if atomic.CompareAndSwapInt64(&conn.closed, 0, 1) {
-			conn.sendFinished()
-			conn.finalize()
+			conn.SendFinished()
+			conn.Finalize()
 			// we don't call erase() here since we're already under mx.Lock()
 			delete(l.conns, id)
 		}
@@ -117,7 +117,7 @@ func (l *link) stop() {
 	l.conns = nil
 }
 
-func (l *link) call() network.Connection {
+func (l *link) Call() network.Connection {
 	if !l.isOut() {
 		return nil
 	}
@@ -129,6 +129,6 @@ func (l *link) call() network.Connection {
 	return conn
 }
 
-func (l *link) remoteAddr() net.Addr {
+func (l *link) RemoteAddr() net.Addr {
 	return l.tcpLink.RemoteAddr()
 }

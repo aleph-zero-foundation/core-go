@@ -20,7 +20,7 @@ type instance struct {
 	stat       Status
 }
 
-func (ins *instance) sendData(w io.Writer) error {
+func (ins *instance) SendData(w io.Writer) error {
 	ins.Lock()
 	defer ins.Unlock()
 	err := encodeUint32(w, ins.rawLen)
@@ -31,7 +31,7 @@ func (ins *instance) sendData(w io.Writer) error {
 	return err
 }
 
-func (ins *instance) sendProof(w io.Writer) error {
+func (ins *instance) SendProof(w io.Writer) error {
 	ins.Lock()
 	defer ins.Unlock()
 	if ins.stat != Finished {
@@ -41,15 +41,15 @@ func (ins *instance) sendProof(w io.Writer) error {
 	return err
 }
 
-func (ins *instance) sendFinished(w io.Writer) error {
-	err := ins.sendData(w)
+func (ins *instance) SendFinished(w io.Writer) error {
+	err := ins.SendData(w)
 	if err != nil {
 		return err
 	}
-	return ins.sendProof(w)
+	return ins.SendProof(w)
 }
 
-func (ins *instance) acceptSignature(pid uint16, r io.Reader) (bool, error) {
+func (ins *instance) AcceptSignature(pid uint16, r io.Reader) (bool, error) {
 	signature := make([]byte, multi.SignatureLength)
 	_, err := io.ReadFull(r, signature)
 	ins.Lock()
@@ -71,7 +71,7 @@ func (ins *instance) acceptSignature(pid uint16, r io.Reader) (bool, error) {
 	return false, nil
 }
 
-func (ins *instance) sendSignature(w io.Writer) error {
+func (ins *instance) SendSignature(w io.Writer) error {
 	ins.Lock()
 	defer ins.Unlock()
 	if ins.stat == Unknown {
@@ -88,7 +88,7 @@ func (ins *instance) sendSignature(w io.Writer) error {
 	return nil
 }
 
-func (ins *instance) acceptProof(r io.Reader) error {
+func (ins *instance) AcceptProof(r io.Reader) error {
 	ins.Lock()
 	defer ins.Unlock()
 	if ins.stat == Unknown {
@@ -110,14 +110,14 @@ func (ins *instance) acceptProof(r io.Reader) error {
 	return nil
 }
 
-func (ins *instance) data() []byte {
+func (ins *instance) Data() []byte {
 	if int(ins.rawLen) == len(ins.signedData) {
 		return ins.signedData
 	}
 	return ins.signedData[8 : 8+ins.rawLen]
 }
 
-func (ins *instance) status() Status {
+func (ins *instance) Status() Status {
 	ins.Lock()
 	defer ins.Unlock()
 	return ins.stat
@@ -138,7 +138,7 @@ func newIncoming(id uint64, pid uint16, keys *multi.Keychain) *incoming {
 	}
 }
 
-func (in *incoming) acceptData(r io.Reader) ([]byte, error) {
+func (in *incoming) AcceptData(r io.Reader) ([]byte, error) {
 	rawLen, err := decodeUint32(r)
 	if err != nil {
 		return nil, err
@@ -165,15 +165,15 @@ func (in *incoming) acceptData(r io.Reader) ([]byte, error) {
 	if in.stat == Unknown {
 		in.stat = Data
 	}
-	return in.data(), nil
+	return in.Data(), nil
 }
 
-func (in *incoming) acceptFinished(r io.Reader) ([]byte, error) {
-	result, err := in.acceptData(r)
+func (in *incoming) AcceptFinished(r io.Reader) ([]byte, error) {
+	result, err := in.AcceptData(r)
 	if err != nil {
 		return nil, err
 	}
-	return result, in.acceptProof(r)
+	return result, in.AcceptProof(r)
 }
 
 func newOutgoing(id uint64, data []byte, keys *multi.Keychain) *instance {
