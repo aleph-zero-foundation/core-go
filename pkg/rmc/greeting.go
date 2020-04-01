@@ -1,19 +1,16 @@
 package rmc
 
 import (
-	"encoding/binary"
-	"io"
-
 	"gitlab.com/alephledger/core-go/pkg/network"
 )
 
 // Greet sends a greeting to the given conn.
 func Greet(conn network.Connection, pid uint16, id uint64, msgType byte) error {
-	var data [11]byte
-	binary.LittleEndian.PutUint16(data[0:], pid)
-	binary.LittleEndian.PutUint64(data[2:], id)
-	data[10] = msgType
-	_, err := conn.Write(data[:])
+	err := network.Greet(conn, pid, id)
+	if err != nil {
+		return err
+	}
+	_, err = conn.Write([]byte{msgType})
 	if err != nil {
 		return err
 	}
@@ -22,13 +19,12 @@ func Greet(conn network.Connection, pid uint16, id uint64, msgType byte) error {
 
 // AcceptGreeting accepts a greeting and returns the information it learned from it.
 func AcceptGreeting(conn network.Connection) (pid uint16, id uint64, msgType byte, err error) {
-	var data [11]byte
-	_, err = io.ReadFull(conn, data[:])
+	pid, id, err = network.AcceptGreeting(conn)
 	if err != nil {
 		return
 	}
-	pid = binary.LittleEndian.Uint16(data[0:])
-	id = binary.LittleEndian.Uint64(data[2:])
-	msgType = data[10]
+	var data [1]byte
+	_, err = conn.Read(data[:])
+	msgType = data[0]
 	return
 }
