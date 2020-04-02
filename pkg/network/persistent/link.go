@@ -16,22 +16,24 @@ import (
 // When encountering an error during reading, the link shuts down the TCP connection and marks itself "dead". To restore
 // the communication a new link needs to be created.
 type link struct {
-	tcpLink net.Conn
-	conns   map[uint64]*conn
-	queue   chan network.Connection
-	lastID  uint64
-	mx      sync.Mutex
-	wg      *sync.WaitGroup
-	quit    *int64
+	tcpLink    net.Conn
+	remoteAddr net.Addr
+	conns      map[uint64]*conn
+	queue      chan network.Connection
+	lastID     uint64
+	mx         sync.Mutex
+	wg         *sync.WaitGroup
+	quit       *int64
 }
 
 func newLink(tcpLink net.Conn, queue chan network.Connection, wg *sync.WaitGroup, quit *int64) *link {
 	return &link{
-		tcpLink: tcpLink,
-		conns:   make(map[uint64]*conn),
-		queue:   queue,
-		wg:      wg,
-		quit:    quit,
+		tcpLink:    tcpLink,
+		remoteAddr: tcpLink.RemoteAddr(),
+		conns:      make(map[uint64]*conn),
+		queue:      queue,
+		wg:         wg,
+		quit:       quit,
 	}
 }
 
@@ -105,7 +107,7 @@ func (l *link) Stop() {
 		return
 	}
 	for id, conn := range l.conns {
-		if atomic.CompareAndSwapInt64(&conn.closed, 0, 1) {
+		if atomic.CompareAndSwapInt64(&conn.closing, 0, 1) {
 			conn.SendFinished()
 			conn.Finalize()
 			// we don't call erase() here since we're already under mx.Lock()
@@ -130,5 +132,5 @@ func (l *link) Call() network.Connection {
 }
 
 func (l *link) RemoteAddr() net.Addr {
-	return l.tcpLink.RemoteAddr()
+	return l.remoteAddr
 }

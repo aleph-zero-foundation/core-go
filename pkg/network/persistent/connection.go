@@ -31,39 +31,43 @@ func parseHeader(header []byte) (uint64, uint32) {
 }
 
 type chanReader struct {
-	ch chan []byte
+	ch     chan []byte
+	closed chan struct{}
 }
 
-func newChanReader(size int) *chanReader {
-	return &chanReader{ch: make(chan []byte, size)}
+func newChanReader(size int, closed chan struct{}) *chanReader {
+	return &chanReader{ch: make(chan []byte, size), closed: closed}
 }
 
 func (cr *chanReader) Read(b []byte) (int, error) {
-	if buf, ok := <-cr.ch; ok {
+	select {
+	case buf := <-cr.ch:
 		return bytes.NewReader(buf).Read(b)
+	case <-cr.closed:
+		return 0, errors.New("Read on a closed connection")
 	}
-	return 0, errors.New("Read on a closed connection")
-
 }
 
 type conn struct {
-	id     uint64
-	link   *link
-	queue  *chanReader
-	reader *bufio.Reader
-	frame  []byte
-	buffer []byte
-	bufLen int
-	sent   int
-	recv   int
-	closed int64
+	id      uint64
+	link    *link
+	queue   *chanReader
+	reader  *bufio.Reader
+	frame   []byte
+	buffer  []byte
+	bufLen  int
+	sent    int
+	recv    int
+	closed  chan struct{}
+	closing int64
 }
 
 // newConn creates a Connection with given id that wraps a tcp connection link
 func newConn(id uint64, ln *link) *conn {
+	closed := make(chan struct{})
 	frame := make([]byte, headerSize+bufSize)
 	binary.LittleEndian.PutUint64(frame, id)
-	queue := newChanReader(32)
+	queue := newChanReader(32, closed)
 	return &conn{
 		id:     id,
 		link:   ln,
@@ -71,6 +75,7 @@ func newConn(id uint64, ln *link) *conn {
 		reader: bufio.NewReaderSize(queue, bufSize),
 		frame:  frame,
 		buffer: frame[headerSize:],
+		closed: closed,
 	}
 }
 
@@ -79,7 +84,7 @@ func (c *conn) Read(b []byte) (int, error) {
 }
 
 func (c *conn) Write(b []byte) (int, error) {
-	if atomic.LoadInt64(&c.closed) > 0 {
+	if c.isClosed() {
 		return 0, errors.New("Write on a closed connection")
 	}
 	total := 0
@@ -99,7 +104,7 @@ func (c *conn) Write(b []byte) (int, error) {
 }
 
 func (c *conn) Flush() error {
-	if atomic.LoadInt64(&c.closed) > 0 {
+	if c.isClosed() {
 		return errors.New("Flush on a closed connection")
 	}
 	if c.bufLen == 0 {
@@ -115,8 +120,21 @@ func (c *conn) Flush() error {
 	return nil
 }
 
+func (c *conn) isClosed() bool {
+	select {
+	case <-c.closed:
+		return true
+	default:
+		return false
+	}
+	return false
+}
+
 func (c *conn) Close() error {
-	if atomic.CompareAndSwapInt64(&c.closed, 0, 1) {
+	if c.isClosed() {
+		return nil
+	}
+	if atomic.CompareAndSwapInt64(&c.closing, 0, 1) {
 		err := c.SendFinished()
 		if err != nil {
 			return err
@@ -128,7 +146,7 @@ func (c *conn) Close() error {
 }
 
 func (c *conn) LocalClose() {
-	if atomic.CompareAndSwapInt64(&c.closed, 0, 1) {
+	if atomic.CompareAndSwapInt64(&c.closing, 0, 1) {
 		c.Finalize()
 		c.erase()
 	}
@@ -146,9 +164,11 @@ func (c *conn) RemoteAddr() net.Addr {
 }
 
 func (c *conn) Enqueue(b []byte) {
-	if atomic.LoadInt64(&c.closed) == 0 {
-		c.queue.ch <- b
+	select {
+	case c.queue.ch <- b:
 		c.recv += len(b)
+	case <-c.closed:
+		return
 	}
 }
 
@@ -161,7 +181,7 @@ func (c *conn) SendFinished() error {
 }
 
 func (c *conn) Finalize() {
-	close(c.queue.ch)
+	close(c.closed)
 }
 
 func (c *conn) erase() {
