@@ -127,7 +127,6 @@ func (c *conn) isClosed() bool {
 	default:
 		return false
 	}
-	return false
 }
 
 func (c *conn) Close() error {
@@ -153,6 +152,9 @@ func (c *conn) LocalClose() {
 }
 
 func (c *conn) TimeoutAfter(t time.Duration) {
+	if !c.link.IsDead() {
+		c.link.tcpLink.SetDeadline(time.Now().Add(t))
+	}
 	go func() {
 		time.Sleep(t)
 		c.Close()
