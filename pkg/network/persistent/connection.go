@@ -32,17 +32,23 @@ func parseHeader(header []byte) (uint64, uint32) {
 
 type chanReader struct {
 	ch     chan []byte
+	left   *bytes.Reader
 	closed chan struct{}
 }
 
 func newChanReader(size int, closed chan struct{}) *chanReader {
-	return &chanReader{ch: make(chan []byte, size), closed: closed}
+	return &chanReader{ch: make(chan []byte, size), closed: closed, left: bytes.NewReader([]byte{})}
 }
 
 func (cr *chanReader) Read(b []byte) (int, error) {
+	if cr.left.Len() != 0 {
+		return cr.left.Read(b)
+	}
 	select {
 	case buf := <-cr.ch:
-		return bytes.NewReader(buf).Read(b)
+		reader := bytes.NewReader(buf)
+		cr.left = reader
+		return reader.Read(b)
 	case <-cr.closed:
 		return 0, errors.New("Read on a closed connection")
 	}
