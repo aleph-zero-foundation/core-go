@@ -27,11 +27,11 @@ func (c *connection) Flush() error {
 }
 
 func (c *connection) Close() error {
-	if err := c.in.CloseWithError(errors.New("")); err != nil {
-		c.out.CloseWithError(errors.New(""))
+	if err := c.in.CloseWithError(nil); err != nil {
+		c.out.CloseWithError(nil)
 		return err
 	}
-	return c.out.CloseWithError(errors.New(""))
+	return c.out.CloseWithError(nil)
 }
 
 func (c *connection) TimeoutAfter(time.Duration) {}
