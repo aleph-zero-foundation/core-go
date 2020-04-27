@@ -39,6 +39,11 @@ type Share struct {
 	sgn   *bn256.Signature
 }
 
+// Owner returns owner's PID of this share.
+func (sh *Share) Owner() uint16 {
+	return sh.owner
+}
+
 // Signature is a result of merging Shares.
 type Signature struct {
 	sgn *bn256.Signature
