@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"net"
-	"time"
 
 	"gitlab.com/alephledger/core-go/pkg/network"
 )
@@ -42,8 +41,8 @@ func (c *connIn) Close() error {
 	return nil
 }
 
-func (c *connIn) TimeoutAfter(t time.Duration) {
-	// does nothing as the UDP connIn is non-blocking anyway
+func (c *connIn) Interrupt() error {
+	return nil
 }
 
 func (c *connIn) RemoteAddr() net.Addr {
