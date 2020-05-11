@@ -20,10 +20,11 @@ func newTimeoutConnection(baseTimeout time.Duration, connection Connection) Conn
 	}
 }
 
-// It attempts to call Interrupt using the baseTimeout value as hint. It implements it playing a simple random game
-// using a fair coin. It starts with 1 as the initial stake and keeps playing till stake <= 0. After each `baseTimeout` ticks
-// it draws a fair coin and based on it increases or decreases the current stake.
-// Therefore, it calls Interrupt after `baseTimeout` with probability 1/2.
+// It attempts to call Interrupt using the baseTimeout value as a hint. It implements it by the means of a simple random game
+// that uses a fair coin. It starts with 1 as the initial stake and keeps playing till stake <= 0. After each `baseTimeout`
+// ticks it toss a fair coin and based on it increases or decreases the current stake.
+// Therefore, it calls Interrupt after `baseTimeout` with probability 1/2. It can be proved that it timeouts with probability 1
+// and that expected value of the time after it timeouts is `infinity`.
 func (tc *timeoutConn) tryTimeout(stopChan chan error) {
 	var err error
 	defer func() { stopChan <- err }()
@@ -37,12 +38,6 @@ func (tc *timeoutConn) tryTimeout(stopChan chan error) {
 		return coin[0]%2 == 0, err
 	}
 	for stake > 0 {
-
-		select {
-		case <-stopChan:
-			return
-		default:
-		}
 
 		select {
 		case <-ticker.C:
@@ -79,7 +74,7 @@ func (tc *timeoutConn) Read(data []byte) (n int, err error) {
 	stopErr := <-stop
 
 	if err != nil || stopErr != nil {
-		err = fmt.Errorf("error occurred while calling Read on timed-connection: %v ; %v", err, stopErr)
+		err = fmt.Errorf("error occurred while calling Read on timeoutConn: %v ; %v", err, stopErr)
 	}
 	return
 }
@@ -91,7 +86,7 @@ func (tc *timeoutConn) Write(data []byte) (n int, err error) {
 	stop <- nil
 	stopErr := <-stop
 	if err != nil || stopErr != nil {
-		err = fmt.Errorf("error occurred while calling Write on timed-connection: %v ; %v", err, stopErr)
+		err = fmt.Errorf("error occurred while calling Write on timeoutConn: %v ; %v", err, stopErr)
 	}
 	return
 }
@@ -103,7 +98,7 @@ func (tc *timeoutConn) Flush() (err error) {
 	stop <- nil
 	stopErr := <-stop
 	if err != nil || stopErr != nil {
-		err = fmt.Errorf("error occurred while calling Flush on timed-connection: %v ; %v", err, stopErr)
+		err = fmt.Errorf("error occurred while calling Flush on timeoutConn: %v ; %v", err, stopErr)
 	}
 	return
 }
@@ -112,7 +107,7 @@ func (tc *timeoutConn) Close() (err error) {
 	err1 := tc.Flush()
 	err2 := tc.Connection.Close()
 	if err1 != nil || err2 != nil {
-		err = fmt.Errorf("error occurred while calling Close on timed-connection: %v ;  %v", err1, err2)
+		err = fmt.Errorf("error occurred while calling Close on timeoutConn: %v ;  %v", err1, err2)
 	}
 	return
 }
