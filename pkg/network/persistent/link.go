@@ -50,7 +50,7 @@ func (l *link) Start() {
 			conn, ok := l.getConn(id)
 			if size == 0 {
 				if ok {
-					conn.LocalClose()
+					conn.Enqueue([]byte{})
 				}
 				continue
 			}
@@ -107,7 +107,6 @@ func (l *link) Stop() {
 	for id, conn := range l.conns {
 		if atomic.CompareAndSwapInt64(&conn.closed, 0, 1) {
 			conn.SendFinished()
-			conn.Finalize()
 			// we don't call erase() here since we're already under mx.Lock()
 			delete(l.conns, id)
 		}

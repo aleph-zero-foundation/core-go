@@ -39,7 +39,7 @@ func newChanReader(size int) *chanReader {
 }
 
 func (cr *chanReader) Read(b []byte) (int, error) {
-	if buf, ok := <-cr.ch; ok {
+	if buf := <-cr.ch; len(buf) > 0 {
 		return bytes.NewReader(buf).Read(b)
 	}
 	return 0, errors.New("Read on a closed connection")
@@ -118,17 +118,9 @@ func (c *conn) Close() error {
 		if err != nil {
 			return err
 		}
-		c.Finalize()
 		c.erase()
 	}
 	return nil
-}
-
-func (c *conn) LocalClose() {
-	if atomic.CompareAndSwapInt64(&c.closed, 0, 1) {
-		c.Finalize()
-		c.erase()
-	}
 }
 
 func (c *conn) TimeoutAfter(t time.Duration) {
@@ -146,9 +138,7 @@ func (c *conn) RemoteAddr() net.Addr {
 }
 
 func (c *conn) Enqueue(b []byte) {
-	if atomic.LoadInt64(&c.closed) == 0 {
-		c.queue.ch <- b
-	}
+	c.queue.ch <- b
 }
 
 func (c *conn) SendFinished() error {
@@ -157,10 +147,6 @@ func (c *conn) SendFinished() error {
 	binary.LittleEndian.PutUint32(header[8:], 0)
 	_, err := c.link.tcpLink.Write(header)
 	return err
-}
-
-func (c *conn) Finalize() {
-	close(c.queue.ch)
 }
 
 func (c *conn) erase() {
