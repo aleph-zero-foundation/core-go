@@ -54,8 +54,6 @@ type conn struct {
 	frame  []byte
 	buffer []byte
 	bufLen int
-	sent   int
-	recv   int
 	closed int64
 }
 
@@ -110,7 +108,6 @@ func (c *conn) Flush() error {
 	if err != nil {
 		return err
 	}
-	c.sent += c.bufLen
 	c.bufLen = 0
 	return nil
 }
@@ -135,6 +132,9 @@ func (c *conn) LocalClose() {
 }
 
 func (c *conn) TimeoutAfter(t time.Duration) {
+	if !c.link.IsDead() {
+		c.link.tcpLink.SetDeadline(time.Now().Add(t))
+	}
 	go func() {
 		time.Sleep(t)
 		c.Close()
@@ -148,7 +148,6 @@ func (c *conn) RemoteAddr() net.Addr {
 func (c *conn) Enqueue(b []byte) {
 	if atomic.LoadInt64(&c.closed) == 0 {
 		c.queue.ch <- b
-		c.recv += len(b)
 	}
 }
 
