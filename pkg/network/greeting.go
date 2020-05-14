@@ -6,15 +6,12 @@ import (
 )
 
 // Greet sends a greeting to the given conn.
-func Greet(conn Connection, pid uint16, sid uint64) error {
+func Greet(w io.Writer, pid uint16, sid uint64) error {
 	var data [10]byte
 	binary.LittleEndian.PutUint16(data[0:], pid)
 	binary.LittleEndian.PutUint64(data[2:], sid)
-	_, err := conn.Write(data[:])
-	if err != nil {
-		return err
-	}
-	return conn.Flush()
+	_, err := w.Write(data[:])
+	return err
 }
 
 // AcceptGreeting accepts a greeting and returns the information it learned from it.
