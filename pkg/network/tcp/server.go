@@ -12,8 +12,8 @@ import (
 type server struct {
 	listener    *net.TCPListener
 	remoteAddrs []string
-	ctx         context.Context
-	cancel      context.CancelFunc
+	dialCtx     context.Context
+	dialCancel  context.CancelFunc
 	log         zerolog.Logger
 }
 
@@ -27,12 +27,12 @@ func NewServer(localAddress string, remoteAddresses []string, log zerolog.Logger
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	dialCtx, dialCancel := context.WithCancel(context.Background())
 	return &server{
 		listener:    listener,
 		remoteAddrs: remoteAddresses,
-		ctx:         ctx,
-		cancel:      cancel,
+		dialCtx:     dialCtx,
+		dialCancel:  dialCancel,
 		log:         log,
 	}, nil
 }
@@ -48,7 +48,7 @@ func (s *server) Listen() (network.Connection, error) {
 
 func (s *server) Dial(pid uint16) (network.Connection, error) {
 	var dial net.Dialer
-	link, err := dial.DialContext(s.ctx, "tcp", s.remoteAddrs[pid])
+	link, err := dial.DialContext(s.dialCtx, "tcp", s.remoteAddrs[pid])
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (s *server) Dial(pid uint16) (network.Connection, error) {
 }
 
 func (s *server) Stop() {
-	s.cancel()
+	s.dialCancel()
 	err := s.listener.Close()
 	if err != nil {
 		s.log.Err(err).Msg("error occurred while calling Close on the tcp-listener")
