@@ -167,6 +167,10 @@ func (c *conn) TimeoutAfter(t time.Duration) {
 	}()
 }
 
+func (c *conn) Interrupt() error {
+	return nil
+}
+
 func (c *conn) RemoteAddr() net.Addr {
 	return c.link.RemoteAddr()
 }

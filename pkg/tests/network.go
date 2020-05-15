@@ -36,6 +36,8 @@ func (c *connection) Close() error {
 
 func (c *connection) TimeoutAfter(time.Duration) {}
 
+func (c *connection) Interrupt() error { return nil }
+
 func (c *connection) RemoteAddr() net.Addr { return nil }
 
 // NewConnection creates a pipe simulating a pair of network connections.
@@ -49,34 +51,37 @@ func NewConnection() (network.Connection, network.Connection) {
 type Server struct {
 	dialChans  []chan network.Connection
 	listenChan chan network.Connection
+	timeout    time.Duration
 }
 
 // Dial creates a new connection, pushes one end to the associated dial channel and return the other.
-func (s *Server) Dial(k uint16, timeout time.Duration) (network.Connection, error) {
+func (s *Server) Dial(k uint16) (network.Connection, error) {
 	out, in := NewConnection()
 	if int(k) >= len(s.dialChans) {
 		return nil, errors.New("unknown host")
 	}
 	select {
 	case s.dialChans[k] <- in:
-	case <-time.After(timeout):
+	case <-time.After(s.timeout):
 		return nil, errors.New("Dial timeout")
 	}
 	return out, nil
 }
 
 // Listen picks up a connection from the listen channel
-func (s *Server) Listen(timeout time.Duration) (network.Connection, error) {
+func (s *Server) Listen() (network.Connection, error) {
 	select {
 	case conn, ok := <-s.listenChan:
 		if !ok {
 			return nil, errors.New("done")
 		}
 		return conn, nil
-	case <-time.After(timeout):
+	case <-time.After(s.timeout):
 	}
 	return nil, errors.New("Listen timeout")
 }
+
+func (s *Server) Stop() {}
 
 // CloseNetwork closes all the dial channels.
 func CloseNetwork(servers []network.Server) {
@@ -88,7 +93,7 @@ func CloseNetwork(servers []network.Server) {
 }
 
 // NewNetwork returns a slice of interconnected servers that simulate the network of the given size.
-func NewNetwork(length int) []network.Server {
+func NewNetwork(length int, timeout time.Duration) []network.Server {
 	channels := make([]chan network.Connection, length)
 	for i := range channels {
 		channels[i] = make(chan network.Connection)
@@ -97,7 +102,9 @@ func NewNetwork(length int) []network.Server {
 	for i := range servers {
 		servers[i] = &Server{
 			dialChans:  channels,
-			listenChan: channels[i]}
+			listenChan: channels[i],
+			timeout:    timeout,
+		}
 	}
 	return servers
 }

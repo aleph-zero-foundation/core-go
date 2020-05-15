@@ -20,13 +20,14 @@ type server struct {
 	tcpListener *net.TCPListener
 	mx          []sync.Mutex
 	wg          sync.WaitGroup
+	timeout     time.Duration
 	quit        int64
 }
 
 // NewServer initializes network setup for the given local address and the set of remote addresses.
 // Returns an object that implements BOTH network.Server and core.Service interfaces.
 // It needs to be started as a service to activate listening for incoming TCP connections.
-func NewServer(localAddress string, remoteAddresses []string) (network.Server, core.Service, error) {
+func NewServer(localAddress string, remoteAddresses []string, timeout time.Duration) (network.Server, core.Service, error) {
 	nProc := len(remoteAddresses)
 	s := &server{
 		localAddr:   localAddress,
@@ -34,24 +35,25 @@ func NewServer(localAddress string, remoteAddresses []string) (network.Server, c
 		callers:     make([]*link, nProc),
 		receivers:   make([]*link, 0, nProc),
 		queue:       make(chan network.Connection, 5*nProc),
+		timeout:     timeout,
 		mx:          make([]sync.Mutex, nProc),
 	}
 	return s, s, nil
 }
 
-func (s *server) Dial(pid uint16, timeout time.Duration) (network.Connection, error) {
-	caller, err := s.getCaller(pid, timeout)
+func (s *server) Dial(pid uint16) (network.Connection, error) {
+	caller, err := s.getCaller(pid, s.timeout)
 	if err != nil {
 		return nil, err
 	}
 	return caller.Call(), nil
 }
 
-func (s *server) Listen(timeout time.Duration) (network.Connection, error) {
+func (s *server) Listen() (network.Connection, error) {
 	select {
 	case conn := <-s.queue:
 		return conn, nil
-	case <-time.After(timeout):
+	case <-time.After(s.timeout):
 		return nil, errors.New("Listen timed out")
 	}
 }
