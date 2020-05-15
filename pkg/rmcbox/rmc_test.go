@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"gitlab.com/alephledger/core-go/pkg/crypto/bn256"
-	. "gitlab.com/alephledger/core-go/pkg/rmc"
+	. "gitlab.com/alephledger/core-go/pkg/rmcbox"
 )
 
 var _ = Describe("Rmc", func() {
