@@ -8,6 +8,7 @@ package udp
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"time"
 
@@ -43,19 +44,27 @@ func (c *connOut) Write(b []byte) (int, error) {
 }
 
 func (c *connOut) Flush() error {
-	_, err := c.link.Write(c.writeBuffer)
+	err := c.link.SetWriteDeadline(time.Time{})
+	if err != nil {
+		return err
+	}
+	_, err = c.link.Write(c.writeBuffer)
 	c.sent += len(c.writeBuffer)
 	c.writeBuffer = make([]byte, 0)
 	return err
 }
 
 func (c *connOut) Close() error {
-	err := c.link.Close()
-	return err
+	err1 := c.Flush()
+	err2 := c.link.Close()
+	if err1 != nil || err2 != nil {
+		return fmt.Errorf("error occurred while closing udp-out-connection: %v ; %v", err1, err2)
+	}
+	return nil
 }
 
-func (c *connOut) TimeoutAfter(t time.Duration) {
-	c.link.SetDeadline(time.Now().Add(t))
+func (c *connOut) Interrupt() error {
+	return c.link.SetDeadline(time.Now())
 }
 
 func (c *connOut) RemoteAddr() net.Addr {
