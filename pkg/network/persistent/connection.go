@@ -31,37 +31,49 @@ func parseHeader(header []byte) (uint64, uint32) {
 }
 
 type chanReader struct {
-	ch chan []byte
+	ch     chan []byte
+	left   *bytes.Reader
+	closed chan struct{}
 }
 
-func newChanReader(size int) *chanReader {
-	return &chanReader{ch: make(chan []byte, size)}
+func newChanReader(size int, closed chan struct{}) *chanReader {
+	return &chanReader{ch: make(chan []byte, size), closed: closed, left: bytes.NewReader([]byte{})}
 }
 
 func (cr *chanReader) Read(b []byte) (int, error) {
-	if buf := <-cr.ch; len(buf) > 0 {
-		return bytes.NewReader(buf).Read(b)
+	if cr.left.Len() != 0 {
+		return cr.left.Read(b)
 	}
-	return 0, errors.New("Read on a closed connection")
-
+	select {
+	case buf := <-cr.ch:
+		reader := bytes.NewReader(buf)
+		cr.left = reader
+		return reader.Read(b)
+	case <-cr.closed:
+		return 0, errors.New("Read on a closed connection")
+	}
 }
 
 type conn struct {
-	id     uint64
-	link   *link
-	queue  *chanReader
-	reader *bufio.Reader
-	frame  []byte
-	buffer []byte
-	bufLen int
-	closed int64
+	id      uint64
+	link    *link
+	queue   *chanReader
+	reader  *bufio.Reader
+	frame   []byte
+	buffer  []byte
+	bufLen  int
+	sent    int
+	recv    int
+	closed  chan struct{}
+	closing int64
 }
 
 // newConn creates a Connection with given id that wraps a tcp connection link
 func newConn(id uint64, ln *link) *conn {
+	closed := make(chan struct{})
 	frame := make([]byte, headerSize+bufSize)
 	binary.LittleEndian.PutUint64(frame, id)
-	queue := newChanReader(32)
+	queue := newChanReader(32, closed)
 	return &conn{
 		id:     id,
 		link:   ln,
@@ -69,6 +81,7 @@ func newConn(id uint64, ln *link) *conn {
 		reader: bufio.NewReaderSize(queue, bufSize),
 		frame:  frame,
 		buffer: frame[headerSize:],
+		closed: closed,
 	}
 }
 
@@ -77,7 +90,7 @@ func (c *conn) Read(b []byte) (int, error) {
 }
 
 func (c *conn) Write(b []byte) (int, error) {
-	if atomic.LoadInt64(&c.closed) > 0 {
+	if c.isClosed() {
 		return 0, errors.New("Write on a closed connection")
 	}
 	total := 0
@@ -97,7 +110,7 @@ func (c *conn) Write(b []byte) (int, error) {
 }
 
 func (c *conn) Flush() error {
-	if atomic.LoadInt64(&c.closed) > 0 {
+	if c.isClosed() {
 		return errors.New("Flush on a closed connection")
 	}
 	if c.bufLen == 0 {
@@ -108,19 +121,40 @@ func (c *conn) Flush() error {
 	if err != nil {
 		return err
 	}
+	c.sent += c.bufLen
 	c.bufLen = 0
 	return nil
 }
 
+func (c *conn) isClosed() bool {
+	select {
+	case <-c.closed:
+		return true
+	default:
+		return false
+	}
+}
+
 func (c *conn) Close() error {
-	if atomic.CompareAndSwapInt64(&c.closed, 0, 1) {
+	if c.isClosed() {
+		return nil
+	}
+	if atomic.CompareAndSwapInt64(&c.closing, 0, 1) {
 		err := c.SendFinished()
 		if err != nil {
 			return err
 		}
+		c.Finalize()
 		c.erase()
 	}
 	return nil
+}
+
+func (c *conn) LocalClose() {
+	if atomic.CompareAndSwapInt64(&c.closing, 0, 1) {
+		c.Finalize()
+		c.erase()
+	}
 }
 
 func (c *conn) TimeoutAfter(t time.Duration) {
@@ -138,7 +172,12 @@ func (c *conn) RemoteAddr() net.Addr {
 }
 
 func (c *conn) Enqueue(b []byte) {
-	c.queue.ch <- b
+	select {
+	case c.queue.ch <- b:
+		c.recv += len(b)
+	case <-c.closed:
+		return
+	}
 }
 
 func (c *conn) SendFinished() error {
@@ -147,6 +186,10 @@ func (c *conn) SendFinished() error {
 	binary.LittleEndian.PutUint32(header[8:], 0)
 	_, err := c.link.tcpLink.Write(header)
 	return err
+}
+
+func (c *conn) Finalize() {
+	close(c.closed)
 }
 
 func (c *conn) erase() {

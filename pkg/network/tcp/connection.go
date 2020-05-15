@@ -3,6 +3,7 @@ package tcp
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"time"
 
@@ -14,56 +15,55 @@ const (
 )
 
 type conn struct {
-	link   net.Conn
-	reader *bufio.Reader
-	writer *bufio.Writer
-	sent   int
-	recv   int
+	*bufio.Reader
+	*bufio.Writer
+	link net.Conn
 }
 
-// newConn creates a Connection object wrapping a particular tcp connection link
+// newConn creates a Connection object wrapping a particular tcp connection link.
 func newConn(link net.Conn) network.Connection {
 	return &conn{
 		link:   link,
-		reader: bufio.NewReaderSize(link, bufSize),
-		writer: bufio.NewWriterSize(link, bufSize),
+		Reader: bufio.NewReaderSize(link, bufSize),
+		Writer: bufio.NewWriterSize(link, bufSize),
 	}
 }
 
 func (c *conn) Read(b []byte) (int, error) {
-	n, err := c.reader.Read(b)
-	c.recv += n
-	return n, err
+	err := c.link.SetReadDeadline(time.Time{})
+	if err != nil {
+		return 0, err
+	}
+	return c.Reader.Read(b)
 }
 
 func (c *conn) Write(b []byte) (int, error) {
-	written, n := 0, 0
-	var err error
-	for written < len(b) {
-		n, err = c.writer.Write(b[written:])
-		written += n
-		if err == bufio.ErrBufferFull {
-			err = c.writer.Flush()
-		}
-		if err != nil {
-			break
-		}
+	err := c.link.SetWriteDeadline(time.Time{})
+	if err != nil {
+		return 0, err
 	}
-	c.sent += written
-	return written, err
+	return c.Writer.Write(b)
 }
 
 func (c *conn) Flush() error {
-	return c.writer.Flush()
+	err := c.link.SetWriteDeadline(time.Time{})
+	if err != nil {
+		return err
+	}
+	return c.Writer.Flush()
 }
 
 func (c *conn) Close() error {
-	err := c.link.Close()
-	return err
+	err1 := c.Flush()
+	err2 := c.link.Close()
+	if err1 != nil || err2 != nil {
+		return fmt.Errorf("error occurred while closing connection: %v ; %v", err1, err2)
+	}
+	return nil
 }
 
-func (c *conn) TimeoutAfter(t time.Duration) {
-	c.link.SetDeadline(time.Now().Add(t))
+func (c *conn) Interrupt() error {
+	return c.link.SetDeadline(time.Now())
 }
 
 func (c *conn) RemoteAddr() net.Addr {

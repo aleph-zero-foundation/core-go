@@ -1,19 +1,25 @@
 package udp
 
 import (
+	"context"
 	"net"
-	"time"
+
+	"github.com/rs/zerolog"
 
 	"gitlab.com/alephledger/core-go/pkg/network"
 )
 
 type server struct {
+	dialer      net.Dialer
+	dialCtx     context.Context
+	dialCancel  context.CancelFunc
 	listener    *net.UDPConn
 	remoteAddrs []string
+	log         zerolog.Logger
 }
 
 // NewServer initializes the network setup for the given local address and the set of remote addresses.
-func NewServer(localAddress string, remoteAddresses []string) (network.Server, error) {
+func NewServer(localAddress string, remoteAddresses []string, log zerolog.Logger) (network.Server, error) {
 	local, err := net.ResolveUDPAddr("udp", localAddress)
 	if err != nil {
 		return nil, err
@@ -22,14 +28,17 @@ func NewServer(localAddress string, remoteAddresses []string) (network.Server, e
 	if err != nil {
 		return nil, err
 	}
+	dialCtx, dialCancel := context.WithCancel(context.Background())
 	return &server{
 		listener:    listener,
 		remoteAddrs: remoteAddresses,
+		dialCtx:     dialCtx,
+		dialCancel:  dialCancel,
+		log:         log,
 	}, nil
 }
 
-func (s *server) Listen(timeout time.Duration) (network.Connection, error) {
-	s.listener.SetDeadline(time.Now().Add(timeout))
+func (s *server) Listen() (network.Connection, error) {
 	buffer := make([]byte, (1 << 16))
 	n, addr, err := s.listener.ReadFromUDP(buffer)
 	if err != nil {
@@ -39,11 +48,19 @@ func (s *server) Listen(timeout time.Duration) (network.Connection, error) {
 	return conn, nil
 }
 
-func (s *server) Dial(pid uint16, timeout time.Duration) (network.Connection, error) {
-	// can consider setting a timeout here, yet DialUDP is non-blocking, so there should be no need
-	link, err := net.Dial("udp", s.remoteAddrs[pid])
+func (s *server) Dial(pid uint16) (network.Connection, error) {
+	var dial net.Dialer
+	link, err := dial.DialContext(s.dialCtx, "udp", s.remoteAddrs[pid])
 	if err != nil {
 		return nil, err
 	}
 	return newConnOut(link), nil
+}
+
+func (s *server) Stop() {
+	s.dialCancel()
+	err := s.listener.Close()
+	if err != nil {
+		s.log.Err(err).Msg("error occurred while calling Close on the udp-listener")
+	}
 }
