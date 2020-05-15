@@ -1,4 +1,4 @@
-package rmc
+package rmcbox
 
 // Status represents a state of a reliable multicast.
 type Status byte

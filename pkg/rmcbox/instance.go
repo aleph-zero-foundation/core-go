@@ -1,4 +1,4 @@
-package rmc
+package rmcbox
 
 import (
 	"encoding/binary"

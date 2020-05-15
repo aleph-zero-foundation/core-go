@@ -1,10 +1,10 @@
-// Package rmc implements a reliable multicast for arbitrary data.
+// Package rmcbox implements a reliable multicast for arbitrary data.
 //
 // This protocol is based on RBC (reliable broadcast), but has slightly different guarantees.
 // Crucially a piece of data multicast with RMC with a given id will agree among all who received it, i.e. it is unique.
 // The protocol has no hard guarantees pertaining pessimistic message complexity,
 // but can be used in tandem with gossip protocols to disseminate data with proofs of uniqueness.
-package rmc
+package rmcbox
 
 import (
 	"errors"
@@ -44,7 +44,10 @@ func (rmc *RMC) InitiateRaw(id uint64, data []byte) error {
 // It verifies that the id matches the provided one, and that the signature was made by pid.
 // It returns the data itself, for protocol-independent verification.
 func (rmc *RMC) AcceptData(id uint64, pid uint16, r io.Reader) ([]byte, error) {
-	in, err := rmc.newIncomingInstance(id, pid)
+	in, err := rmc.getIn(id)
+	if err != nil {
+		in, err = rmc.newIncomingInstance(id, pid)
+	}
 	if err != nil {
 		return nil, err
 	}
