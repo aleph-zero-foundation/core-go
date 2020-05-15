@@ -1,4 +1,4 @@
-package rmc_test
+package rmcbox_test
 
 import (
 	"testing"

@@ -1,10 +1,10 @@
-// Package rmc implements a reliable multicast for arbitrary data.
+// Package rmcbox implements a reliable multicast for arbitrary data.
 //
 // This protocol is based on RBC (reliable broadcast), but has slightly different guarantees.
 // Crucially a piece of data multicast with RMC with a given id will agree among all who received it, i.e. it is unique.
 // The protocol has no hard guarantees pertaining pessimistic message complexity,
 // but can be used in tandem with gossip protocols to disseminate data with proofs of uniqueness.
-package rmc
+package rmcbox
 
 import (
 	"errors"
