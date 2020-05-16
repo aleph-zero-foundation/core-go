@@ -81,6 +81,7 @@ func (s *Server) Listen() (network.Connection, error) {
 	return nil, errors.New("Listen timeout")
 }
 
+// Stop this, linter!
 func (s *Server) Stop() {}
 
 // CloseNetwork closes all the dial channels.
