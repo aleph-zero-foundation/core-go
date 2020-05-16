@@ -11,22 +11,31 @@ import (
 // Data is a packet of binary data that is embedded in a single unit.
 type Data []byte
 
-// DataSink is an output for the data to sort.
-type DataSink chan<- Data
+// DataSource is a provider of Data.
+type DataSource interface {
+	GetData() Data
+}
 
-// Preblock is a set of Data objects from units contained in one block (timing round).
+// Preblock is a set of Data from units contained in one timing round (block)
+// together with some RandomBytes produced by common randomness.
 type Preblock struct {
 	Data        []Data
 	RandomBytes []byte
 }
 
-// PreblockSink is an output of the aleph protocol.
+// NewPreblock constructs a preblock from given data and randomBytes.
+func NewPreblock(data []Data, randomBytes []byte) *Preblock {
+	return &Preblock{data, randomBytes}
+}
+
+// PreblockSink is a channel on which preblocks are written.
 type PreblockSink chan<- *Preblock
 
-// PreblockSource is a source of preblocks.
+// PreblockSource is a channel providing new preblocks.
 type PreblockSource <-chan *Preblock
 
-// Block is a final element of the blockchain produced by the protocol.
+// Block is a preblock that has been processed and signed by committee members.
+// It is the final building block of the blockchain produced by the protocol.
 type Block struct {
 	Preblock
 	ID             uint64
@@ -58,11 +67,6 @@ type BlockSource <-chan *Block
 
 // BlockSink is an output channel for the blockchain produced.
 type BlockSink chan<- *Block
-
-// NewPreblock constructs a preblock from given data and randomBytes.
-func NewPreblock(data []Data, randomBytes []byte) *Preblock {
-	return &Preblock{data, randomBytes}
-}
 
 // ToBlock creates a block from a given preblock and additional data.
 func ToBlock(pb *Preblock, id uint64, additionalData []Data) *Block {

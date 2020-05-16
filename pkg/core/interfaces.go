@@ -38,8 +38,3 @@ type Validator interface {
 
 // BuildValidator using the given config and logger.
 type BuildValidator func(config io.Reader, log zerolog.Logger) (Validator, DataSource, error)
-
-// DataSource is a source of units data.
-type DataSource interface {
-	GetData() Data
-}
