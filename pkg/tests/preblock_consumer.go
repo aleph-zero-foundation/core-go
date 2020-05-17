@@ -47,3 +47,19 @@ func ControlSumPreblockConsumer(ps core.PreblockSource, w io.Writer) {
 	msg += "Control sum: " + base64.StdEncoding.EncodeToString(last) + "\n"
 	w.Write([]byte(msg))
 }
+
+// DataExtractingPreblockConsumer reads preblocks from the source and writes all data contained in them to the provided writer.
+func DataExtractingPreblockConsumer(ps core.PreblockSource, w io.Writer) {
+	n := 0
+	for pb := range ps {
+		msg := []byte("Preblock " + strconv.Itoa(n) + "\n")
+		w.Write(msg)
+		n++
+		for _, d := range pb.Data {
+			if len(d) > 0 {
+				w.Write(d)
+				w.Write([]byte("\n"))
+			}
+		}
+	}
+}
