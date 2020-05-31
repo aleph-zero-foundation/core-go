@@ -11,6 +11,7 @@ import (
 
 type server struct {
 	listener    *net.TCPListener
+	localAddr   string
 	remoteAddrs []string
 	dialCtx     context.Context
 	dialCancel  context.CancelFunc
@@ -18,23 +19,15 @@ type server struct {
 }
 
 // NewServer initializes the network setup for the given local address and the set of remote addresses.
-func NewServer(localAddress string, remoteAddresses []string, log zerolog.Logger) (network.Server, error) {
-	local, err := net.ResolveTCPAddr("tcp", localAddress)
-	if err != nil {
-		return nil, err
-	}
-	listener, err := net.ListenTCP("tcp", local)
-	if err != nil {
-		return nil, err
-	}
+func NewServer(localAddress string, remoteAddresses []string, log zerolog.Logger) network.Server {
 	dialCtx, dialCancel := context.WithCancel(context.Background())
 	return &server{
-		listener:    listener,
+		localAddr:   localAddress,
 		remoteAddrs: remoteAddresses,
 		dialCtx:     dialCtx,
 		dialCancel:  dialCancel,
 		log:         log,
-	}, nil
+	}
 }
 
 func (s *server) Listen() (network.Connection, error) {
@@ -55,6 +48,18 @@ func (s *server) Dial(pid uint16) (network.Connection, error) {
 	return newConn(link), nil
 }
 
+func (s *server) Start() error {
+	local, err := net.ResolveTCPAddr("tcp", s.localAddr)
+	if err != nil {
+		return err
+	}
+	listener, err := net.ListenTCP("tcp", local)
+	if err != nil {
+		return err
+	}
+	s.listener = listener
+	return nil
+}
 func (s *server) Stop() {
 	s.dialCancel()
 	err := s.listener.Close()

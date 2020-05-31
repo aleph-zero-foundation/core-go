@@ -15,11 +15,13 @@ import (
 var _ = Describe("tcp", func() {
 	Context("interrupted connection", func() {
 		It("should be interrupted and return an error", func() {
-			serv1, err1 := NewServer("localhost:6666", []string{"localhost:6667"}, zerolog.Nop())
+			serv1 := NewServer("localhost:6666", []string{"localhost:6667"}, zerolog.Nop())
+			err1 := serv1.Start()
 			Expect(err1).NotTo(HaveOccurred())
 			defer serv1.Stop()
 
-			serv2, err2 := NewServer("localhost:6667", []string{"localhost:6666"}, zerolog.Nop())
+			serv2 := NewServer("localhost:6667", []string{"localhost:6666"}, zerolog.Nop())
+			err2 := serv2.Start()
 			Expect(err2).NotTo(HaveOccurred())
 			defer serv2.Stop()
 
@@ -46,11 +48,13 @@ var _ = Describe("tcp", func() {
 		})
 
 		It("should be still usable", func() {
-			serv1, err1 := NewServer("localhost:6666", []string{"localhost:6667"}, zerolog.Nop())
+			serv1 := NewServer("localhost:6666", []string{"localhost:6667"}, zerolog.Nop())
+			err1 := serv1.Start()
 			Expect(err1).NotTo(HaveOccurred())
 			defer serv1.Stop()
 
-			serv2, err2 := NewServer("localhost:6667", []string{"localhost:6666"}, zerolog.Nop())
+			serv2 := NewServer("localhost:6667", []string{"localhost:6666"}, zerolog.Nop())
+			err2 := serv2.Start()
 			Expect(err2).NotTo(HaveOccurred())
 			defer serv2.Stop()
 
@@ -114,11 +118,13 @@ var _ = Describe("tcp", func() {
 	Context("not interrupted connection", func() {
 		Context("listening process is writing", func() {
 			It(" should finish normally", func() {
-				serv1, err1 := NewServer("localhost:6666", []string{"localhost:6667"}, zerolog.Nop())
+				serv1 := NewServer("localhost:6666", []string{"localhost:6667"}, zerolog.Nop())
+				err1 := serv1.Start()
 				Expect(err1).NotTo(HaveOccurred())
 				defer serv1.Stop()
 
-				serv2, err2 := NewServer("localhost:6667", []string{"localhost:6666"}, zerolog.Nop())
+				serv2 := NewServer("localhost:6667", []string{"localhost:6666"}, zerolog.Nop())
+				err2 := serv2.Start()
 				Expect(err2).NotTo(HaveOccurred())
 				defer serv2.Stop()
 
@@ -154,11 +160,13 @@ var _ = Describe("tcp", func() {
 
 		Context("dialing process is writing", func() {
 			It("should finish normally", func() {
-				serv1, err1 := NewServer("localhost:6666", []string{"localhost:6667"}, zerolog.Nop())
+				serv1 := NewServer("localhost:6666", []string{"localhost:6667"}, zerolog.Nop())
+				err1 := serv1.Start()
 				Expect(err1).NotTo(HaveOccurred())
 				defer serv1.Stop()
 
-				serv2, err2 := NewServer("localhost:6667", []string{"localhost:6666"}, zerolog.Nop())
+				serv2 := NewServer("localhost:6667", []string{"localhost:6666"}, zerolog.Nop())
+				err2 := serv2.Start()
 				Expect(err2).NotTo(HaveOccurred())
 				defer serv2.Stop()
 

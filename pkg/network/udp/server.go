@@ -14,28 +14,21 @@ type server struct {
 	dialCtx     context.Context
 	dialCancel  context.CancelFunc
 	listener    *net.UDPConn
+	localAddr   string
 	remoteAddrs []string
 	log         zerolog.Logger
 }
 
 // NewServer initializes the network setup for the given local address and the set of remote addresses.
-func NewServer(localAddress string, remoteAddresses []string, log zerolog.Logger) (network.Server, error) {
-	local, err := net.ResolveUDPAddr("udp", localAddress)
-	if err != nil {
-		return nil, err
-	}
-	listener, err := net.ListenUDP("udp", local)
-	if err != nil {
-		return nil, err
-	}
+func NewServer(localAddress string, remoteAddresses []string, log zerolog.Logger) network.Server {
 	dialCtx, dialCancel := context.WithCancel(context.Background())
 	return &server{
-		listener:    listener,
+		localAddr:   localAddress,
 		remoteAddrs: remoteAddresses,
 		dialCtx:     dialCtx,
 		dialCancel:  dialCancel,
 		log:         log,
-	}, nil
+	}
 }
 
 func (s *server) Listen() (network.Connection, error) {
@@ -55,6 +48,19 @@ func (s *server) Dial(pid uint16) (network.Connection, error) {
 		return nil, err
 	}
 	return newConnOut(link), nil
+}
+
+func (s *server) Start() error {
+	local, err := net.ResolveUDPAddr("udp", s.localAddr)
+	if err != nil {
+		return err
+	}
+	listener, err := net.ListenUDP("udp", local)
+	if err != nil {
+		return err
+	}
+	s.listener = listener
+	return nil
 }
 
 func (s *server) Stop() {

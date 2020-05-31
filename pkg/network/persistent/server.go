@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gitlab.com/alephledger/core-go/pkg/core"
 	"gitlab.com/alephledger/core-go/pkg/network"
 )
 
@@ -27,9 +26,9 @@ type server struct {
 // NewServer initializes network setup for the given local address and the set of remote addresses.
 // Returns an object that implements BOTH network.Server and core.Service interfaces.
 // It needs to be started as a service to activate listening for incoming TCP connections.
-func NewServer(localAddress string, remoteAddresses []string, timeout time.Duration) (network.Server, core.Service, error) {
+func NewServer(localAddress string, remoteAddresses []string, timeout time.Duration) network.Server {
 	nProc := len(remoteAddresses)
-	s := &server{
+	return &server{
 		localAddr:   localAddress,
 		remoteAddrs: remoteAddresses,
 		callers:     make([]*link, nProc),
@@ -38,7 +37,6 @@ func NewServer(localAddress string, remoteAddresses []string, timeout time.Durat
 		timeout:     timeout,
 		mx:          make([]sync.Mutex, nProc),
 	}
-	return s, s, nil
 }
 
 func (s *server) Dial(pid uint16) (network.Connection, error) {

@@ -113,18 +113,18 @@ func (tc *timeoutConn) Close() (err error) {
 }
 
 type timeoutConnectionServer struct {
-	wrapped Server
+	Server
 	timeout time.Duration
 }
 
 // NewTimeoutConnectionServer creates an instance of a network Server that wrapes a given Server by creating instance of
 // potentially infinitely long timing-out connections.
 func NewTimeoutConnectionServer(server Server, baseTimeout time.Duration) Server {
-	return &timeoutConnectionServer{wrapped: server, timeout: baseTimeout}
+	return &timeoutConnectionServer{Server: server, timeout: baseTimeout}
 }
 
 func (tcs *timeoutConnectionServer) Dial(pid uint16) (Connection, error) {
-	con, err := tcs.wrapped.Dial(pid)
+	con, err := tcs.Server.Dial(pid)
 	if err != nil {
 		return nil, err
 	}
@@ -132,13 +132,9 @@ func (tcs *timeoutConnectionServer) Dial(pid uint16) (Connection, error) {
 }
 
 func (tcs *timeoutConnectionServer) Listen() (Connection, error) {
-	con, err := tcs.wrapped.Listen()
+	con, err := tcs.Server.Listen()
 	if err != nil {
 		return nil, err
 	}
 	return newTimeoutConnection(tcs.timeout, con), nil
-}
-
-func (tcs *timeoutConnectionServer) Stop() {
-	tcs.wrapped.Stop()
 }

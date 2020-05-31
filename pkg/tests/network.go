@@ -81,6 +81,9 @@ func (s *Server) Listen() (network.Connection, error) {
 	return nil, errors.New("Listen timeout")
 }
 
+// Start mock
+func (s *Server) Start() error { return nil }
+
 // Stop this, linter!
 func (s *Server) Stop() {}
 
