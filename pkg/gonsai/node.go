@@ -256,19 +256,16 @@ func (nd *node) calcStHash() hash {
 	}
 
 	infos := make([]*info, 0)
-	for i := byte(0); ; i++ {
-		if ch, ok := nd.stChildren[i]; ok {
+	for i := 0; i < 256; i++ {
+		if ch, ok := nd.stChildren[byte(i)]; ok {
 			if ch == nil {
 				continue
 			}
 			infos = append(infos, &info{ch.getName(), ch.calcStHash()})
 			continue
 		}
-		if ch, ok := nd.children[i]; ok {
+		if ch, ok := nd.children[byte(i)]; ok {
 			infos = append(infos, &info{ch.getName(), ch.calcStHash()})
-		}
-		if i == 255 {
-			break
 		}
 	}
 	nd.stHash = hashNodes(infos)
