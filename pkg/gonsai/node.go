@@ -14,7 +14,7 @@ type node struct {
 	// Invariants:
 	// inv0: data != nil <=> node is a leaf
 	// inv1: in children and stChildren name of the node stored under X starts with X
-	// inv2: every non-leaf node has at least 2 children (path compression)
+	// inv2: every non-leaf non-root node has at least 2 children (path compression)
 	// inv3: stHash != nil <=> no changes in stage of the whole subtree since last calcStHash()
 }
 
@@ -194,8 +194,10 @@ func (nd *node) checkChildren() *node {
 			}
 			return v
 		}
-		for _, v := range nd.children {
-			return v
+		for k, v := range nd.children {
+			if _, ok := nd.stChildren[k]; !ok {
+				return v
+			}
 		}
 	}
 	return nil
@@ -215,6 +217,7 @@ func (nd *node) Reset() {
 func (nd *node) Commit() {
 	if nd.stage && nd.stHash != nil {
 		nd.hash = nd.stHash
+		nd.stHash = nil
 		for k, v := range nd.stChildren {
 			if v != nil {
 				nd.children[k] = v
@@ -222,17 +225,18 @@ func (nd *node) Commit() {
 				delete(nd.children, k)
 			}
 		}
-		for _, v := range nd.children {
-			v.Commit()
-		}
-		if nd.stName != nil {
-			nd.name = nd.stName
+		for _, ch := range nd.children {
+			if ch.stName != nil {
+				ch.name = ch.stName
+				ch.stName = nil
+			}
+			ch.Commit()
 		}
 		if nd.stData != nil {
 			nd.data = nd.stData
+			nd.stData = nil
 		}
 		nd.stChildren = make(map[byte]*node)
-		nd.stName, nd.stHash, nd.stData = nil, nil, nil
 		nd.stage = false
 	}
 }
