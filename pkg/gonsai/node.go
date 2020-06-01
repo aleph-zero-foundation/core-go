@@ -178,28 +178,24 @@ func (nd *node) StageDelete(key []byte) (bool, *node) {
 func (nd *node) checkChildren() *node {
 	count := len(nd.children)
 	for k, v := range nd.stChildren {
-		if _, ok := nd.children[k]; !ok { // new child in staged
+		_, ok := nd.children[k]
+		if v == nil && ok { // deletion of existing child
+			count--
+		}
+		if v != nil && !ok { // insertion of a new child
 			count++
-		} else {
-			if v == nil { // child deletion staged
-				count--
-			}
 		}
 	}
 	if count == 1 {
 		// nd has only one future child left, find it
-		for k, v := range nd.children {
-			if _, ok := nd.stChildren[k]; !ok {
-				return v
-			}
-		}
-		for k, v := range nd.stChildren {
+		for _, v := range nd.stChildren {
 			if v == nil {
 				continue
 			}
-			if _, ok := nd.children[k]; !ok {
-				return v
-			}
+			return v
+		}
+		for _, v := range nd.children {
+			return v
 		}
 	}
 	return nil
