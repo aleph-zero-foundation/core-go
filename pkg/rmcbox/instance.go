@@ -1,6 +1,7 @@
 package rmcbox
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"io"
@@ -159,12 +160,18 @@ func (in *incoming) AcceptData(r io.Reader) ([]byte, error) {
 	proof := multi.NewSignature(crypto.MinimalQuorum(nProc), signedData)
 	in.Lock()
 	defer in.Unlock()
+	if in.stat == Unknown {
+		in.stat = Data
+	} else {
+		thisData := signedData[8 : 8+rawLen]
+		if !bytes.Equal(thisData, in.Data()) {
+			return nil, errors.New("different data already accepted")
+		}
+		return in.Data(), nil
+	}
 	in.signedData = signedData
 	in.rawLen = rawLen
 	in.proof = proof
-	if in.stat == Unknown {
-		in.stat = Data
-	}
 	return in.Data(), nil
 }
 
