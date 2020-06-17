@@ -95,19 +95,24 @@ func (ins *instance) AcceptProof(r io.Reader) error {
 	if ins.stat == Unknown {
 		return errors.New("cannot accept proof of unknown data")
 	}
-	data := make([]byte, ins.proof.MarshaledLength())
+	nProc := uint16(ins.keys.Length())
+	proof := multi.NewSignature(crypto.MinimalQuorum(nProc), ins.signedData)
+	data := make([]byte, proof.MarshaledLength())
 	_, err := io.ReadFull(r, data)
 	if err != nil {
 		return err
 	}
-	_, err = ins.proof.Unmarshal(data)
+	_, err = proof.Unmarshal(data)
 	if err != nil {
 		return err
 	}
-	if !ins.keys.MultiVerify(ins.proof) {
+	if !ins.keys.MultiVerify(proof) {
 		return errors.New("wrong multisignature")
 	}
-	ins.stat = Finished
+	if ins.stat != Finished {
+		ins.proof = proof
+		ins.stat = Finished
+	}
 	return nil
 }
 
