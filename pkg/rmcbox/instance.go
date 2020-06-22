@@ -1,6 +1,7 @@
 package rmcbox
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"io"
@@ -94,19 +95,24 @@ func (ins *instance) AcceptProof(r io.Reader) error {
 	if ins.stat == Unknown {
 		return errors.New("cannot accept proof of unknown data")
 	}
-	data := make([]byte, ins.proof.MarshaledLength())
+	nProc := uint16(ins.keys.Length())
+	proof := multi.NewSignature(crypto.MinimalQuorum(nProc), ins.signedData)
+	data := make([]byte, proof.MarshaledLength())
 	_, err := io.ReadFull(r, data)
 	if err != nil {
 		return err
 	}
-	_, err = ins.proof.Unmarshal(data)
+	_, err = proof.Unmarshal(data)
 	if err != nil {
 		return err
 	}
-	if !ins.keys.MultiVerify(ins.proof) {
+	if !ins.keys.MultiVerify(proof) {
 		return errors.New("wrong multisignature")
 	}
-	ins.stat = Finished
+	if ins.stat != Finished {
+		ins.proof = proof
+		ins.stat = Finished
+	}
 	return nil
 }
 
@@ -159,12 +165,18 @@ func (in *incoming) AcceptData(r io.Reader) ([]byte, error) {
 	proof := multi.NewSignature(crypto.MinimalQuorum(nProc), signedData)
 	in.Lock()
 	defer in.Unlock()
+	if in.stat == Unknown {
+		in.stat = Data
+	} else {
+		thisData := signedData[8 : 8+rawLen]
+		if !bytes.Equal(thisData, in.Data()) {
+			return nil, errors.New("different data already accepted")
+		}
+		return in.Data(), nil
+	}
 	in.signedData = signedData
 	in.rawLen = rawLen
 	in.proof = proof
-	if in.stat == Unknown {
-		in.stat = Data
-	}
 	return in.Data(), nil
 }
 
