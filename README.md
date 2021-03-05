@@ -1,5 +1,6 @@
 # Aleph Library
 
+This is a mirror of GitLab [repository](https://gitlab.com/alephledger/core-go).
 
 This repository contains a library used by [Aleph Zero Foundation](https://alephzero.org) projects.
 
